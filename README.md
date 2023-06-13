@@ -13,3 +13,5 @@ I am trying to write an interface such that I can prompt the display of some dif
   - memory card
 - HDMI
 - Projector
+# Diagram
+![arch diagram v1](./DiagramSnapshot.png)
