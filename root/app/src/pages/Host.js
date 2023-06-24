@@ -1,53 +1,59 @@
 import { useEffect, useState } from 'react';
 import db from '../firebase';
-import { doc,collection, addDoc, onSnapshot } from "firebase/firestore";
+import { doc,collection, query, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 
-try {
-  const docRef = await addDoc(collection(db, "users"), {
-    first: "Ada",
-    last: "Lovelace",
-    born: 1815
-  });
-  console.log("Document written with ID: ", docRef.id);
-} catch (e) {
-  console.error("Error adding document: ", e);
-}
  
 function Host() {
+  const colletionRef = collection(db, 'host-sessions');
   const [sessions, setSessions] = useState([]);
-  // try {
-  //   const docRef = addDoc(collection(db, "host-sessions"), {
-  //     code: '000001'
-  //   }).then(()=>{
-  //     console.log("Document written with ID: ", docRef.id);
-  //   }
-  //   );
-  // } catch (e) {
-  //   console.error("Error adding document: ", e);
-  // }
-  function getSession() {
-    const unsub = onSnapshot(collection(db, "host-sessions"), (docs) => {
+  const [currentSessionDiv, setCurrentSessionDiv] = useState(<div>Please join or create a session</div>);
+  let currentSession = null;
+  useEffect(() => {
+    const q = query(
+      colletionRef
+    );
+    const unsub = onSnapshot(colletionRef, (querySnapshot) => {
       const items = [];
-      docs.forEach((doc) => {
+      querySnapshot.forEach((doc) => {
         items.push(doc.data());
       });
-      console.log(items);
       setSessions(items);
     });
-    
+    return () => {
+      unsub();
+    };
+
+    // eslint-disable-next-line
+  }, []);
+
+  async function createNewSession(){
+    let intCode = Math.floor(Math.random() * 16777216);
+    let hexCode = intCode.toString(16);
+    currentSession = hexCode;
+    const newSession = {
+      createdAt: serverTimestamp(),
+      lastUpdate: serverTimestamp(),
+    }
+    try {
+      const sessionRef = doc(colletionRef, hexCode);
+      await setDoc(sessionRef, newSession);
+    } catch (error) {
+      console.error(error);
+    }
+    setCurrentSessionDiv(<div>Current Session: {currentSession}</div>);
+    console.log("new session: " + currentSession);
   }
-  useEffect(() => {
-    getSession();
-  });
-  
-
-
   return (
     <div>
       <h1>Host</h1>
-      {sessions.map((session) => (
-        <h2>{session.code}</h2>
-      ))}
+      {currentSessionDiv}
+      <button onClick={()=>createNewSession()}>New Session</button>
+      <form>
+        <label for="joinSessionId">Join an Existing Session as a Host:</label>
+        <input type="text" id="joinSessionId" name="joinSessionId"/>
+        <input type="submit" value="Submit"/>
+      </form>
+      
     </div>
   );
 }
